@@ -88,6 +88,7 @@ func createPageTitlefromDate(date string) (string, error) {
 		return "", errors.New("Error parsing date:" + err.Error())
 	}
 	result = t.Format("2006-01-02")
+	result = "Plenum:" + result
 	return result, nil
 }
 
@@ -153,7 +154,7 @@ func createPage(filepath string, conf Config) error {
 	fmt.Println("Updating Plenetarium page")
 	linkline := fmt.Sprintf("* [[%v]] #%v", plenumname, plenumsnummer)
 	pageEditParameters := map[string]string{
-		"id":          conf.PlenenPageId,
+		"pageid":      conf.PlenenPageId,
 		"format":      "json",
 		"prependtext": linkline,
 	}
