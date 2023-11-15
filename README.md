@@ -5,6 +5,7 @@ Tool to create a wiki page from a HedgeDoc
 ## Prerequisites
 
 You must have pandoc installed and in your PATH variable for this to work!
+Also you must have a access_token, access_secret, consumer_token and consumer_secret for your wiki.
 
 ## Usage
 
