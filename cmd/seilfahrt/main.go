@@ -123,6 +123,9 @@ func createPage(filepath string, conf Config) error {
 			break
 		}
 	}
+	if plenumname == "" || plenumsnummer == "" {
+		return errors.New("error finding plenumname or plenumsnummer")
+	}
 	fmt.Println("Plenumname: ", plenumname)
 	fmt.Println("Creating Plenumspage with Name:", plenumname, "and Number:", plenumsnummer)
 
@@ -150,9 +153,10 @@ func createPage(filepath string, conf Config) error {
 	}
 
 	fmt.Println("Page created")
+	fmt.Println("https://wiki.nerdberg.de/" + plenumname)
 
 	fmt.Println("Updating Plenetarium page")
-	linkline := fmt.Sprintf("* [[%v]] #%v", plenumname, plenumsnummer)
+	linkline := fmt.Sprintf("* [[%v]] #%v\n", plenumname, plenumsnummer)
 	pageEditParameters := map[string]string{
 		"pageid":      conf.PlenenPageId,
 		"format":      "json",
