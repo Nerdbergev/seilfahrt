@@ -14,8 +14,8 @@ Afterwards simply execute the executable with the -id command line flage and app
 
 ### Command Line Parameters
 
-| Parameter | Description                                              | Default Value |
-|-----------|----------------------------------------------------------|---------------|
-| id        | The ID of the hedgedoc pad to be dowloaded and converted |               |
-| c         | The path to the config file                              | ./config.toml |
-| h         | If active prints all command line args                   |               |
+| Parameter | Description                            | Default Value |
+|-----------|----------------------------------------|---------------|
+| pad       | The ULR of the hedgedoc pad.           |               |
+| c         | The path to the config file            | ./config.toml |
+| h         | If active prints all command line args |               |

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,7 +18,6 @@ import (
 )
 
 type Config struct {
-	HedgedocURL    string
 	WikiURL        string
 	PlenenPageId   string
 	ConsumerToken  string
@@ -26,7 +26,7 @@ type Config struct {
 	AccessSecret   string
 }
 
-var hedgedocPadID string
+var hedgedocPad string
 var configPath string
 
 func loadConfig(filepath string) (Config, error) {
@@ -44,8 +44,16 @@ func loadConfig(filepath string) (Config, error) {
 	return result, nil
 }
 
-func download(id string, conf Config) (string, error) {
-	protourl := fmt.Sprintf(conf.HedgedocURL+"/%v/download", id)
+func download(urlstring string) (string, error) {
+	_, err := url.ParseRequestURI(urlstring)
+	if err != nil {
+		return "", errors.New("Error parsing url: " + err.Error())
+	}
+	protourl := urlstring
+	if protourl[len(protourl)-1:] == "#" {
+		protourl = protourl[:len(protourl)-1]
+	}
+	protourl = protourl + "/download"
 	fmt.Println("Downloading Hedgedoc with url:", protourl)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", protourl, nil)
@@ -175,16 +183,16 @@ func createPage(filepath string, conf Config) error {
 
 func main() {
 	flag.StringVar(&configPath, "c", "./config.toml", "Path to the config file")
-	flag.StringVar(&hedgedocPadID, "id", "", "The id of the pad found in the pads URL")
+	flag.StringVar(&hedgedocPad, "pad", "", "The URL to the hedgedoc pad.")
 	flag.Parse()
-	if hedgedocPadID == "" {
-		log.Fatal("No PadID given")
+	if hedgedocPad == "" {
+		log.Fatal("No Pad given")
 	}
 	conf, err := loadConfig(configPath)
 	if err != nil {
 		log.Fatal("Error loading config: ", err)
 	}
-	mdFile, err := download(hedgedocPadID, conf)
+	mdFile, err := download(hedgedocPad)
 	if err != nil {
 		log.Fatal("Error downloading: ", err)
 	}
