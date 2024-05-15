@@ -10,12 +10,16 @@ Also you must have a access_token, access_secret, consumer_token and consumer_se
 ## Usage
 
 Create a config file with your access tokens and wiki settings and put it next to the executable.
-Afterwards simply execute the executable with the -id command line flage and append the id of the Hedgedoc pad.
+Afterwards simply execute the executable with the -pad command line flag and append the url of the Hedgedoc pad.
+
+Alternativley you can also run it with the -web option which launches a Webserver where you can enter the pads in an edit.
 
 ### Command Line Parameters
 
 | Parameter | Description                            | Default Value |
 |-----------|----------------------------------------|---------------|
-| pad       | The ULR of the hedgedoc pad.           |               |
+| pad       | The URL of the hedgedoc pad.           |               |
 | c         | The path to the config file            | ./config.toml |
 | h         | If active prints all command line args |               |
+| web       | Starts a webserver for interactive use | false         |
+| port      | Defines the port the webserver runs on | 8080          |
