@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"cgt.name/pkg/go-mwclient"
+	"github.com/Nerdbergev/seilfahrt/internal/htmltemplates"
 	"github.com/pelletier/go-toml"
 )
 
@@ -26,8 +28,20 @@ type Config struct {
 	AccessSecret   string
 }
 
+type ResponseData struct {
+	Title   string
+	Message string
+}
+
 var hedgedocPad string
 var configPath string
+var port int
+var web bool
+
+var sumbitTmpl = template.Must(template.New("submit").Parse(htmltemplates.SubmitTemplate))
+var responseTmpl = template.Must(template.New("response").Parse(htmltemplates.ResponseTemplate))
+
+var conf Config
 
 func loadConfig(filepath string) (Config, error) {
 	var result Config
@@ -181,27 +195,88 @@ func createPage(filepath string, conf Config) error {
 	return nil
 }
 
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	sumbitTmpl.Execute(w, nil)
+}
+
+func returnError(w http.ResponseWriter, message string) {
+	log.Println(message)
+	data := ResponseData{
+		Title:   "Error",
+		Message: message,
+	}
+	responseTmpl.Execute(w, data)
+}
+
+func submitHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		url := r.FormValue("url")
+		var data ResponseData
+
+		mdFile, err := download(url)
+		if err != nil {
+			returnError(w, "Error downloading: "+err.Error())
+			return
+		}
+		wikiFile, err := convert(mdFile)
+		if err != nil {
+			returnError(w, "Error converting: "+err.Error())
+			return
+		}
+		err = createPage(wikiFile, conf)
+		if err != nil {
+			returnError(w, "Error creating wikipage: "+err.Error())
+			return
+		}
+
+		data = ResponseData{
+			Title:   "Success",
+			Message: "Page created",
+		}
+
+		responseTmpl.Execute(w, data)
+	} else {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+	}
+}
+
+func startWebserver() {
+	http.HandleFunc("/", homeHandler)
+	http.HandleFunc("/submit", submitHandler)
+	fmt.Println("Starting webserver on port:", port)
+	log.Println(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
+}
+
 func main() {
 	flag.StringVar(&configPath, "c", "./config.toml", "Path to the config file")
 	flag.StringVar(&hedgedocPad, "pad", "", "The URL to the hedgedoc pad.")
+	flag.IntVar(&port, "port", 8080, "Port for the webserver")
+	flag.BoolVar(&web, "web", false, "Start the webserver")
 	flag.Parse()
-	if hedgedocPad == "" {
-		log.Fatal("No Pad given")
+	if !web {
+		if hedgedocPad == "" {
+			log.Fatal("No Pad given")
+		}
 	}
-	conf, err := loadConfig(configPath)
+	var err error
+	conf, err = loadConfig(configPath)
 	if err != nil {
 		log.Fatal("Error loading config: ", err)
 	}
-	mdFile, err := download(hedgedocPad)
-	if err != nil {
-		log.Fatal("Error downloading: ", err)
-	}
-	wikiFile, err := convert(mdFile)
-	if err != nil {
-		log.Fatal("Error converting: ", err)
-	}
-	err = createPage(wikiFile, conf)
-	if err != nil {
-		log.Fatal("Error creating wikipage: ", err)
+	if web {
+		startWebserver()
+	} else {
+		mdFile, err := download(hedgedocPad)
+		if err != nil {
+			log.Fatal("Error downloading: ", err)
+		}
+		wikiFile, err := convert(mdFile)
+		if err != nil {
+			log.Fatal("Error converting: ", err)
+		}
+		err = createPage(wikiFile, conf)
+		if err != nil {
+			log.Fatal("Error creating wikipage: ", err)
+		}
 	}
 }

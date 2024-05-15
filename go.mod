@@ -1,6 +1,6 @@
 module github.com/Nerdbergev/seilfahrt
 
-go 1.21.3
+go 1.21
 
 require (
 	cgt.name/pkg/go-mwclient v1.3.0
