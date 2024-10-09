@@ -23,3 +23,11 @@ Alternativley you can also run it with the -web option which launches a Webserve
 | h         | If active prints all command line args |               |
 | web       | Starts a webserver for interactive use | false         |
 | port      | Defines the port the webserver runs on | 8080          |
+
+### Install as a Service
+
+In the init folder you'll find a example systemd file.
+It asumes that the seilfahrt binary is in /usr/local/bin and the config file is in /etc/seilfahrt
+Copy the seilfahrt.service into the /etc/systemd/system folder
+Then reload the services with sudo systemctl daemon-reload
+Then enable seilfahrt with sudo systemctl enable seilfahrt.service
