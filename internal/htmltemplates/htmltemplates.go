@@ -10,7 +10,7 @@ var SubmitTemplate = `<!DOCTYPE html>
 <body>
     <h1>Enter a URL</h1>
     <form action="/submit" method="POST">
-        <label for="url">URL:</label>
+        <label for="url">Hedgedoc Plenumsprotokoll URL:</label>
         <input type="text" id="url" name="url" required>
         <button type="submit">Submit</button>
     </form>
