@@ -17,6 +17,7 @@ import (
 	"cgt.name/pkg/go-mwclient"
 	"github.com/Nerdbergev/seilfahrt/internal/htmltemplates"
 	"github.com/pelletier/go-toml"
+	gomail "gopkg.in/mail.v2"
 )
 
 type Config struct {
@@ -26,11 +27,23 @@ type Config struct {
 	ConsumerSecret string
 	AccessToken    string
 	AccessSecret   string
+	SendMail       bool
+	MailAdress     string
+	MailPassword   string
+	MailServer     string
+	MailPort       int
+	MailRecipient  string
+	MailSubject    string
+	MailTemplate   string
 }
 
 type ResponseData struct {
 	Title   string
 	Message string
+}
+
+type MailContent struct {
+	Link string
 }
 
 var hedgedocPad string
@@ -114,15 +127,15 @@ func createPageTitlefromDate(date string) (string, error) {
 	return result, nil
 }
 
-func createPage(filepath string, conf Config) error {
+func createPage(filepath string, conf Config) (string, error) {
 	file, err := os.OpenFile(filepath, os.O_RDWR, 0600)
 	if err != nil {
-		return errors.New("Error opening file: " + err.Error())
+		return "", errors.New("Error opening file: " + err.Error())
 	}
 	defer file.Close()
 	rawBytes, err := io.ReadAll(file)
 	if err != nil {
-		return errors.New("Error reading file: " + err.Error())
+		return "", errors.New("Error reading file: " + err.Error())
 	}
 	var plenumname string
 	var plenumsnummer string
@@ -137,7 +150,7 @@ func createPage(filepath string, conf Config) error {
 		if strings.Contains(line, "| Datum") {
 			plenumname, err = createPageTitlefromDate(lines[i+1])
 			if err != nil {
-				return errors.New("Error creating Pagetitle from Date:" + err.Error())
+				return "", errors.New("Error creating Pagetitle from Date:" + err.Error())
 			}
 			foundcount = foundcount + 1
 		}
@@ -146,7 +159,7 @@ func createPage(filepath string, conf Config) error {
 		}
 	}
 	if plenumname == "" || plenumsnummer == "" {
-		return errors.New("error finding plenumname or plenumsnummer")
+		return "", errors.New("error finding plenumname or plenumsnummer")
 	}
 	fmt.Println("Plenumname: ", plenumname)
 	fmt.Println("Creating Plenumspage with Name:", plenumname, "and Number:", plenumsnummer)
@@ -155,12 +168,12 @@ func createPage(filepath string, conf Config) error {
 	// and your HTTP User-Agent. Try to use a meaningful User-Agent.
 	w, err := mwclient.New(conf.WikiURL, "seilfahrt")
 	if err != nil {
-		return errors.New("Error creating client:" + err.Error())
+		return "", errors.New("Error creating client:" + err.Error())
 	}
 
 	err = w.OAuth(conf.ConsumerToken, conf.ConsumerSecret, conf.AccessToken, conf.AccessSecret)
 	if err != nil {
-		return errors.New("Error while oauth:" + err.Error())
+		return "", errors.New("Error while oauth:" + err.Error())
 	}
 
 	pageCreateParameters := map[string]string{
@@ -171,11 +184,12 @@ func createPage(filepath string, conf Config) error {
 
 	err = w.Edit(pageCreateParameters)
 	if err != nil {
-		return errors.New("Error creating page:" + err.Error())
+		return "", errors.New("Error creating page:" + err.Error())
 	}
 
 	fmt.Println("Page created")
-	fmt.Println("https://wiki.nerdberg.de/" + plenumname)
+	pagename := "https://wiki.nerdberg.de/" + plenumname
+	fmt.Println(pagename)
 
 	fmt.Println("Updating Plenetarium page")
 	linkline := fmt.Sprintf("* [[%v]] #%v\n", plenumname, plenumsnummer)
@@ -187,10 +201,50 @@ func createPage(filepath string, conf Config) error {
 
 	err = w.Edit(pageEditParameters)
 	if err != nil {
-		return errors.New("Error updating page:" + err.Error())
+		return "", errors.New("Error updating page:" + err.Error())
 	}
 
 	fmt.Println("Page updated")
+
+	return pagename, nil
+}
+
+func SendMail(pageName string, conf Config) error {
+	mailcontent := MailContent{
+		Link: pageName,
+	}
+
+	tmpl, err := template.ParseFiles(conf.MailTemplate)
+	if err != nil {
+		return errors.New("Error parsing template:" + err.Error())
+	}
+	var body strings.Builder
+	err = tmpl.Execute(&body, mailcontent)
+	if err != nil {
+		return errors.New("Error executing template:" + err.Error())
+	}
+
+	m := gomail.NewMessage()
+
+	// Set E-Mail sender
+	m.SetHeader("From", conf.MailAdress)
+
+	// Set E-Mail receivers
+	m.SetHeader("To", conf.MailRecipient)
+
+	// Set E-Mail subject
+	m.SetHeader("Subject", conf.MailSubject)
+
+	// Set E-Mail body. You can set plain text or html with text/html
+	m.SetBody("text/plain", body.String())
+
+	// Settings for SMTP server
+	d := gomail.NewDialer(conf.MailServer, 587, conf.MailAdress, conf.MailPassword)
+
+	// Now send E-Mail
+	if err := d.DialAndSend(m); err != nil {
+		return errors.New("Error sending mail:" + err.Error())
+	}
 
 	return nil
 }
@@ -223,10 +277,18 @@ func submitHandler(w http.ResponseWriter, r *http.Request) {
 			returnError(w, "Error converting: "+err.Error())
 			return
 		}
-		err = createPage(wikiFile, conf)
+		pagename, err := createPage(wikiFile, conf)
 		if err != nil {
 			returnError(w, "Error creating wikipage: "+err.Error())
 			return
+		}
+
+		if conf.SendMail {
+			err := SendMail(pagename, conf)
+			if err != nil {
+				returnError(w, "Error sending mail: "+err.Error())
+				return
+			}
 		}
 
 		data = ResponseData{
@@ -274,7 +336,7 @@ func main() {
 		if err != nil {
 			log.Fatal("Error converting: ", err)
 		}
-		err = createPage(wikiFile, conf)
+		_, err = createPage(wikiFile, conf)
 		if err != nil {
 			log.Fatal("Error creating wikipage: ", err)
 		}

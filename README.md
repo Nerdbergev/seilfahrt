@@ -31,3 +31,4 @@ It asumes that the seilfahrt binary is in /usr/local/bin and the config file is 
 Copy the seilfahrt.service into the /etc/systemd/system folder
 Then reload the services with sudo systemctl daemon-reload
 Then enable seilfahrt with sudo systemctl enable seilfahrt.service
+Then start seilfahrt with sudo systemctl start seilfahrt.service
