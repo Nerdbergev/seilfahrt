@@ -17,6 +17,7 @@ import (
 	"cgt.name/pkg/go-mwclient"
 	"github.com/Nerdbergev/seilfahrt/internal/htmltemplates"
 	"github.com/pelletier/go-toml"
+	"github.com/google/uuid"
 	gomail "gopkg.in/mail.v2"
 )
 
@@ -237,6 +238,9 @@ func SendMail(pageName string, conf Config) error {
 
 	// Set E-Mail body. You can set plain text or html with text/html
 	m.SetBody("text/plain", body.String())
+
+	// Set Message Id
+	m.SetHeader("Message-ID", uuid.New().String())
 
 	// Settings for SMTP server
 	d := gomail.NewDialer(conf.MailServer, 587, conf.MailAdress, conf.MailPassword)
